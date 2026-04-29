@@ -1,44 +1,68 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
-import PersonaSwitcher from "@/components/PersonaSwitcher";
-import SuggestionChips from "@/components/SuggestionChips";
-import ChatWindow from "@/components/ChatWindow";
-import ChatInput from "@/components/ChatInput";
-import { SUGGESTION_CHIPS, getPersona } from "@/lib/personas";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
+import Avatar from "@/components/Avatar";
+import PersonaCard from "@/components/PersonaCard";
+import Hero from "@/components/Hero";
+import Suggestions from "@/components/Suggestions";
+import Message from "@/components/Message";
+import Composer from "@/components/Composer";
+import ThemeToggle from "@/components/ThemeToggle";
+import { PERSONAS, getPersona } from "@/lib/personas";
 import type { ChatMessage, PersonaId } from "@/lib/types";
 
+type ThreadMap = Record<PersonaId, ChatMessage[]>;
+type ErrorMap = Record<PersonaId, string | null>;
+
+const EMPTY_THREADS: ThreadMap = { anshuman: [], abhimanyu: [], kshitij: [] };
+const EMPTY_ERRORS: ErrorMap = { anshuman: null, abhimanyu: null, kshitij: null };
+
 export default function Home() {
-  const [persona, setPersona] = useState<PersonaId>("anshuman");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState("");
+  const [activeId, setActiveId] = useState<PersonaId>("anshuman");
+  const [threads, setThreads] = useState<ThreadMap>(EMPTY_THREADS);
   const [isStreaming, setIsStreaming] = useState(false);
   const [showTyping, setShowTyping] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<ErrorMap>(EMPTY_ERRORS);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const personaMeta = useMemo(() => getPersona(persona), [persona]);
+  const persona = useMemo(() => getPersona(activeId), [activeId]);
+  const messages = threads[activeId];
+  const error = errors[activeId];
 
-  const handleSwitch = useCallback((id: PersonaId) => {
-    setPersona(id);
-    setMessages([]);
-    setInput("");
-    setError(null);
-    setIsStreaming(false);
-    setShowTyping(false);
-  }, []);
+  const rootStyle = {
+    "--accent": persona.accent,
+    "--accent-soft": persona.accentSoft,
+    "--accent-ink": persona.accentInk,
+  } as CSSProperties;
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }, [messages.length, showTyping, activeId]);
+
+  const switchPersona = (id: PersonaId) => {
+    if (id === activeId || isStreaming) return;
+    setActiveId(id);
+  };
+
+  const reset = () => {
+    setThreads((p) => ({ ...p, [activeId]: [] }));
+    setErrors((p) => ({ ...p, [activeId]: null }));
+  };
 
   const send = useCallback(
     async (text: string) => {
       const trimmed = text.trim();
       if (!trimmed || isStreaming) return;
 
-      setError(null);
-      const nextMessages: ChatMessage[] = [
-        ...messages,
-        { role: "user", content: trimmed },
-      ];
-      setMessages(nextMessages);
-      setInput("");
+      const personaForRequest = activeId;
+      const userMsg: ChatMessage = { role: "user", content: trimmed };
+      const baseHistory = [...threads[personaForRequest], userMsg];
+
+      setErrors((p) => ({ ...p, [personaForRequest]: null }));
+      setThreads((p) => ({ ...p, [personaForRequest]: baseHistory }));
       setIsStreaming(true);
       setShowTyping(true);
 
@@ -46,7 +70,10 @@ export default function Home() {
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: nextMessages, persona }),
+          body: JSON.stringify({
+            messages: baseHistory,
+            persona: personaForRequest,
+          }),
         });
 
         if (!res.ok || !res.body) {
@@ -60,11 +87,19 @@ export default function Home() {
           throw new Error(msg);
         }
 
+        // Push placeholder assistant message into the right thread
+        setThreads((p) => ({
+          ...p,
+          [personaForRequest]: [
+            ...p[personaForRequest],
+            { role: "assistant", content: "" },
+          ],
+        }));
+
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let assistant = "";
         let started = false;
-        setMessages((m) => [...m, { role: "assistant", content: "" }]);
 
         while (true) {
           const { value, done } = await reader.read();
@@ -76,10 +111,10 @@ export default function Home() {
             started = true;
           }
           assistant += chunk;
-          setMessages((m) => {
-            const copy = m.slice();
-            copy[copy.length - 1] = { role: "assistant", content: assistant };
-            return copy;
+          setThreads((p) => {
+            const list = p[personaForRequest].slice();
+            list[list.length - 1] = { role: "assistant", content: assistant };
+            return { ...p, [personaForRequest]: list };
           });
         }
       } catch (err: unknown) {
@@ -87,105 +122,140 @@ export default function Home() {
           err instanceof Error
             ? err.message
             : "Something went wrong. Please try again.";
-        setError(msg);
-        setMessages((m) => {
+        setErrors((p) => ({ ...p, [personaForRequest]: msg }));
+        // Remove empty placeholder if the stream never produced text
+        setThreads((p) => {
+          const list = p[personaForRequest].slice();
           if (
-            m.length &&
-            m[m.length - 1].role === "assistant" &&
-            !m[m.length - 1].content
+            list.length &&
+            list[list.length - 1].role === "assistant" &&
+            !list[list.length - 1].content
           ) {
-            return m.slice(0, -1);
+            list.pop();
           }
-          return m;
+          return { ...p, [personaForRequest]: list };
         });
       } finally {
         setIsStreaming(false);
         setShowTyping(false);
       }
     },
-    [isStreaming, messages, persona]
+    [activeId, isStreaming, threads]
   );
 
-  const isEmpty = messages.length === 0;
-
   return (
-    <main className="flex h-[100dvh] flex-col bg-gradient-to-b from-zinc-50 to-zinc-100 text-zinc-900 dark:from-zinc-950 dark:to-black dark:text-zinc-50">
-      <header className="border-b border-zinc-200/70 bg-white/70 px-3 py-3 backdrop-blur dark:border-zinc-800/70 dark:bg-zinc-950/60 sm:px-6">
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-base font-semibold tracking-tight sm:text-lg">
-                Scaler Persona Chat
-              </h1>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                Talk with Anshuman, Abhimanyu, or Kshitij
-              </p>
-            </div>
-            <span className="hidden rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-[11px] text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 sm:inline-block">
-              Now chatting with{" "}
-              <span className="font-semibold text-zinc-900 dark:text-zinc-50">
-                {personaMeta.name}
-              </span>
-            </span>
-          </div>
-          <PersonaSwitcher active={persona} onChange={handleSwitch} />
+    <div className="app paper-bg" style={rootStyle} data-persona={persona.id}>
+      <aside className="sidebar">
+        <div className="brand">
+          <div className="brand-mark">Lectern</div>
+          <div className="brand-sub">Persona Chat · v1</div>
         </div>
-      </header>
-
-      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col overflow-hidden">
-        {isEmpty ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-8 text-center">
-            <div className="flex flex-col items-center gap-3">
-              <span
-                className={`flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br text-lg font-semibold text-white ${personaMeta.accent}`}
-              >
-                {personaMeta.initials}
-              </span>
-              <div>
-                <h2 className="text-lg font-semibold">{personaMeta.name}</h2>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                  {personaMeta.title}
-                </p>
-              </div>
-            </div>
-            <p className="max-w-md text-sm text-zinc-600 dark:text-zinc-300">
-              Ask anything — career advice, interview prep, the founder journey.
-              Pick a starter below or type your own.
-            </p>
-            <SuggestionChips
-              chips={SUGGESTION_CHIPS[persona]}
-              onPick={(c) => send(c)}
-              disabled={isStreaming}
+        <div className="section-label">Choose your conversation</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          {PERSONAS.map((p) => (
+            <PersonaCard
+              key={p.id}
+              persona={p}
+              active={p.id === activeId}
+              disabled={isStreaming && p.id !== activeId}
+              onClick={() => switchPersona(p.id)}
             />
-          </div>
-        ) : (
-          <ChatWindow
-            messages={messages}
-            persona={personaMeta}
-            isStreaming={isStreaming}
-            showTyping={showTyping}
-          />
-        )}
-
-        <div className="border-t border-zinc-200/70 bg-white/70 px-3 py-3 backdrop-blur dark:border-zinc-800/70 dark:bg-zinc-950/60 sm:px-6">
-          {error && (
-            <div className="mb-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-200">
-              {error}
-            </div>
-          )}
-          <ChatInput
-            value={input}
-            onChange={setInput}
-            onSubmit={() => send(input)}
-            disabled={isStreaming}
-            placeholder={`Message ${personaMeta.name.split(" ")[0]}…`}
-          />
-          <p className="mt-2 text-center text-[11px] text-zinc-400">
-            Persona-based AI. Responses are generated and may not reflect the
-            real person&apos;s views.
-          </p>
+          ))}
         </div>
-      </div>
-    </main>
+        <div className="sidebar-foot">
+          <div>SCALER × INTERVIEWBIT</div>
+          <div style={{ marginTop: 4 }}>BUILT FOR PROMPT-ENG · 2026</div>
+        </div>
+      </aside>
+
+      <main className="main">
+        <header className="topbar">
+          <div className="topbar-left">
+            <Avatar persona={persona} />
+            <span className="topbar-meta">
+              CHAT · {persona.id.toUpperCase()}
+            </span>
+            <span className="topbar-title">a conversation, not a query</span>
+          </div>
+          <div className="topbar-right">
+            <button
+              type="button"
+              className="icon-btn"
+              title="Reset conversation"
+              aria-label="Reset conversation"
+              onClick={reset}
+            >
+              ↺
+            </button>
+            <ThemeToggle />
+          </div>
+        </header>
+
+        <div className="mobile-persona-row" role="tablist" aria-label="Personas">
+          {PERSONAS.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              className={`pill ${p.id === activeId ? "active" : ""}`}
+              role="tab"
+              aria-selected={p.id === activeId}
+              disabled={isStreaming && p.id !== activeId}
+              onClick={() => switchPersona(p.id)}
+              style={
+                {
+                  "--accent": p.accent,
+                  "--accent-soft": p.accentSoft,
+                  "--accent-ink": p.accentInk,
+                } as CSSProperties
+              }
+            >
+              {p.name.split(" ")[0]}
+            </button>
+          ))}
+        </div>
+
+        <div className="scroll" ref={scrollRef}>
+          <div className="column">
+            <Hero persona={persona} />
+            {messages.length === 0 ? (
+              <>
+                <p className="pullquote">{persona.pullQuote}</p>
+                <ol className="knownfor">
+                  {persona.knownFor.map((k) => (
+                    <li key={k}>{k}</li>
+                  ))}
+                </ol>
+                {error && (
+                  <div className="error-banner" style={{ marginBottom: 24 }}>
+                    {error}
+                  </div>
+                )}
+                <Suggestions
+                  persona={persona}
+                  onPick={send}
+                  disabled={isStreaming}
+                />
+              </>
+            ) : (
+              <div className="thread">
+                {messages.map((m, i) => (
+                  <Message key={i} msg={m} persona={persona} />
+                ))}
+                {showTyping && (
+                  <Message
+                    msg={{ role: "assistant", content: "" }}
+                    persona={persona}
+                    typing
+                  />
+                )}
+                {error && <div className="error-banner">{error}</div>}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <Composer persona={persona} onSend={send} disabled={isStreaming} />
+      </main>
+    </div>
   );
 }

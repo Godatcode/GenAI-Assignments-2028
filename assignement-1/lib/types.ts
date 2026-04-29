@@ -10,7 +10,14 @@ export interface ChatMessage {
 export interface PersonaMeta {
   id: PersonaId;
   name: string;
-  title: string;
   initials: string;
+  role: string;
+  location: string;
+  tagline: string;
+  pullQuote: string;
+  knownFor: string[];
+  suggestions: string[];
   accent: string;
+  accentSoft: string;
+  accentInk: string;
 }

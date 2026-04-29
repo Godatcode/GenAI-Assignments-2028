@@ -152,47 +152,80 @@ export const PERSONA_PROMPTS: Record<PersonaId, string> = {
 export const PERSONAS: PersonaMeta[] = [
   {
     id: "anshuman",
-    name: "Anshuman Singh",
-    title: "Co-Founder, Scaler & InterviewBit",
     initials: "AS",
-    accent: "from-indigo-500 to-blue-600",
+    name: "Anshuman Singh",
+    role: "Co-Founder, Scaler & InterviewBit",
+    location: "Bengaluru, India",
+    accent: "oklch(0.62 0.13 45)",
+    accentSoft: "oklch(0.94 0.04 45)",
+    accentInk: "oklch(0.32 0.1 45)",
+    tagline: "Build the system you wish you had as a student.",
+    pullQuote:
+      "If you had told 22-year-old me that one day I'd be helping a hundred thousand engineers level up — I'd have asked you what API you were running on.",
+    knownFor: [
+      "Ex-Facebook engineer — worked on Messenger",
+      "ICPC World Finalist; coding-contest mind",
+      "Co-founded InterviewBit, then Scaler in 2019",
+      "Obsessed with first-principles & DSA fundamentals",
+    ],
+    suggestions: [
+      "What was it like building Facebook Messenger?",
+      "How did you and Abhimanyu start InterviewBit?",
+      "Advice for someone targeting FAANG?",
+      "Is competitive programming still worth it?",
+    ],
   },
   {
     id: "abhimanyu",
-    name: "Abhimanyu Saxena",
-    title: "Co-Founder, Scaler & InterviewBit",
     initials: "AX",
-    accent: "from-emerald-500 to-teal-600",
+    name: "Abhimanyu Saxena",
+    role: "Co-Founder, Scaler & InterviewBit",
+    location: "Bengaluru / SF",
+    accent: "oklch(0.55 0.11 155)",
+    accentSoft: "oklch(0.94 0.035 155)",
+    accentInk: "oklch(0.3 0.09 155)",
+    tagline: "Education is the highest-leverage product you can build.",
+    pullQuote:
+      "We didn't start Scaler because the market needed another course. We started it because the market needed an outcome — and nobody was held accountable for it.",
+    knownFor: [
+      "Ex-Fab.com; early engineer who scaled an e-commerce startup",
+      "Co-founded InterviewBit (2015), then Scaler (2019)",
+      "Operator brain — thinks in funnels, NPS, retention",
+      "Talks openly about hiring, leadership, founder lessons",
+    ],
+    suggestions: [
+      "Why did you bet on edtech?",
+      "How do you think about hiring great engineers?",
+      "What's broken about Indian college CS education?",
+      "How is Scaler different from a coding bootcamp?",
+    ],
   },
   {
     id: "kshitij",
-    name: "Kshitij Mishra",
-    title: "Head of Instructors, Scaler Academy",
     initials: "KM",
-    accent: "from-orange-500 to-rose-600",
+    name: "Kshitij Mishra",
+    role: "Head of Instructors, Scaler Academy",
+    location: "Bengaluru, India",
+    accent: "oklch(0.52 0.13 265)",
+    accentSoft: "oklch(0.94 0.035 265)",
+    accentInk: "oklch(0.3 0.1 265)",
+    tagline: "Clarity before cleverness. Always.",
+    pullQuote:
+      "If you can't explain a problem to a beginner without using jargon, you don't actually understand it yet. That's the bar I hold myself to in every class.",
+    knownFor: [
+      "Leads instructor quality across Scaler Academy",
+      "DSA & system design pedagogy",
+      "Believes teaching is a craft, not a side gig",
+      "Patient, methodical — strong on fundamentals",
+    ],
+    suggestions: [
+      "How should I approach learning DSA from scratch?",
+      "What separates a great instructor from a good one?",
+      "When should I start system design?",
+      "How do you stay calm in live classes?",
+    ],
   },
 ];
-
-export const SUGGESTION_CHIPS: Record<PersonaId, string[]> = {
-  anshuman: [
-    "What was it like building Facebook Messenger?",
-    "How did you and Abhimanyu start InterviewBit?",
-    "What's your advice for someone targeting FAANG?",
-    "How important is competitive programming?",
-  ],
-  abhimanyu: [
-    "How is Scaler different from other bootcamps?",
-    "What skills should I focus on for career growth?",
-    "Is a CS degree necessary to break into tech?",
-    "What's the story behind Scaler School of Technology?",
-  ],
-  kshitij: [
-    "How should I prepare for DSA interviews?",
-    "I struggle with dynamic programming — any tips?",
-    "How do I improve my problem-solving speed?",
-    "What do interviewers actually look for?",
-  ],
-};
 
 export function getPersona(id: PersonaId): PersonaMeta {
   const found = PERSONAS.find((p) => p.id === id);
