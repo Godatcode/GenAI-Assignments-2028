@@ -6,9 +6,9 @@ Built for **Assignment 01 — Persona-Based AI Chatbot**, Prompt Engineering, Sc
 
 ## Live Demo
 
-🔗 **Live URL:** _replace this with your Vercel URL after deploying_
+🔗 **Live URL:** **[gen-ai-vert-nine.vercel.app](https://gen-ai-vert-nine.vercel.app/)**
 
-> Example: `https://persona-chat-yourname.vercel.app`
+Powered by Google Gemini (`gemini-2.5-flash`). The `X-LLM-Provider` response header on `/api/chat` reports the active backend.
 
 ## Screenshots
 
@@ -166,7 +166,7 @@ To add Claude: install `@anthropic-ai/sdk`, create `lib/providers/anthropic.ts` 
 - [x] Streaming responses
 - [x] Mobile-responsive
 - [x] Graceful API error handling
-- [ ] Deployed and live (do this last — see "Deploying to Vercel")
+- [x] Deployed and live → [gen-ai-vert-nine.vercel.app](https://gen-ai-vert-nine.vercel.app/)
 
 ## License
 
