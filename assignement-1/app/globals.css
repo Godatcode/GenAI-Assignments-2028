@@ -617,7 +617,9 @@ html, body {
 @media (max-width: 720px) {
   .app { grid-template-columns: 1fr; }
   .sidebar { display: none; }
+  .main { grid-template-rows: auto auto 1fr auto; }
   .scroll, .topbar, .composer-wrap { padding-left: 18px; padding-right: 18px; }
+  .topbar { padding-top: 14px; padding-bottom: 14px; }
   .hero { grid-template-columns: 80px 1fr; gap: 16px; }
   .hero-name { font-size: 32px; }
   .avatar.xl { width: 80px; height: 80px; font-size: 28px; }
@@ -636,10 +638,13 @@ html, body {
 .mobile-persona-row {
   display: none;
   gap: 8px;
-  padding: 12px 18px;
+  padding: 10px 18px;
   border-bottom: 1px solid var(--paper-rule);
+  background: var(--paper-2);
   overflow-x: auto;
   scrollbar-width: none;
+  flex-shrink: 0;
+  align-items: center;
 }
 .mobile-persona-row::-webkit-scrollbar { display: none; }
 .mobile-persona-row .pill {

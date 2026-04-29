@@ -12,13 +12,14 @@ Powered by Google Gemini (`gemini-2.5-flash`). The `X-LLM-Provider` response hea
 
 ## Screenshots
 
-> Add 2–3 screenshots here after running the app:
->
-> 1. Landing screen with the active persona, suggestion chips, and the persona switcher.
-> 2. A live conversation with one of the personas.
-> 3. Mobile view (375px) showing the responsive layout.
+**Landing — Anshuman Singh, hero + pull quote + numbered "known for" + suggestion chips**
+![Landing — Anshuman Singh](public/screenshots/landing.png)
 
-To capture them quickly: run `npm run dev`, open `http://localhost:3000`, drop the screenshots into a `screenshots/` folder, and reference them like `![Landing](screenshots/landing.png)`.
+**Active conversation — real Gemini streaming response in-character**
+![Active conversation with Anshuman](public/screenshots/conversation.png)
+
+**Mobile (iPhone 14 Pro Max) — sidebar hides, pill-row persona switcher, stacked knownFor, composer pinned**
+![Mobile view — Abhimanyu Saxena](public/screenshots/mobile.png)
 
 ## Features
 
