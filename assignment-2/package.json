@@ -1,0 +1,19 @@
+{
+  "name": "website-cloner-agent",
+  "version": "1.0.0",
+  "description": "Conversational CLI agent that clones websites by generating HTML/CSS/JS via an LLM-driven THINK->TOOL->OBSERVE loop.",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "dotenv": "^16.4.5",
+    "openai": "^4.73.0",
+    "puppeteer": "^23.0.0"
+  }
+}
