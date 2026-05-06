@@ -6,6 +6,18 @@ The agent reasons step-by-step (`START → THINK → TOOL → OBSERVE → … �
 
 ---
 
+## Example
+
+> **Prompt:** `Clone Scaler Academy website`
+
+The agent infers the URL, fetches the live HTML, takes a real screenshot, **looks at it**, and generates a faithful clone:
+
+<img width="1512" alt="Scaler Academy — source captured by the agent's screenshotWebsite tool" src="https://github.com/user-attachments/assets/f965f962-e831-4bd2-b57c-a135302c7d60" />
+
+
+It produces `scaler-clone/index.html`, `styles.css`, and `script.js`, then opens the result in your browser.
+---
+
 ## Architecture
 
 ```
