@@ -1,4 +1,4 @@
-export type SourceKind = "pdf" | "csv" | "text";
+export type SourceKind = "pdf" | "csv" | "text" | "image";
 
 export interface ChunkMetadata {
   documentId: string;

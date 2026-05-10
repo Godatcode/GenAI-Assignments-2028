@@ -39,11 +39,12 @@ A monorepo of hands-on Generative AI projects, each one shipped with a live demo
 📖 **Read more:** [assignment-3/README.md](./assignment-3/README.md)
 
 **Highlights**
-- Three loaders: PDF (page-aware), CSV (row-as-chunk), plain text / markdown
+- Loaders for PDF (page-aware), CSV (row-as-chunk), plain text / markdown — plus images (PNG/JPG/WEBP/GIF) and scanned PDFs via Claude vision OCR
 - Recursive-character chunking (1000 / 150 overlap) — documented strategy beyond naive page splits
 - OpenAI `text-embedding-3-large` embeddings stored in Qdrant Cloud, filtered per-document
 - Claude Sonnet 4.6 streams the answer; system prompt forbids hallucination ("I can't find that in this document.")
-- Source cards under every answer — chunk text + filename + page/row + similarity score
+- Source cards under every answer — chunk text + filename + page/row/image + similarity score
+- Markdown rendering with inline citation chips that survive bold, lists, tables, and headings
 
 ---
 

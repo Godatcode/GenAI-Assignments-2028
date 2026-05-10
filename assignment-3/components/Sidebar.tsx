@@ -15,6 +15,7 @@ const EMBED_DIMS = 3072; // text-embedding-3-large native dimension
 function describeRef(s: Source): string {
   if (s.source === "csv" && typeof s.row === "number") return `row ${s.row}`;
   if (s.source === "pdf" && typeof s.page === "number") return `p. ${s.page}`;
+  if (s.source === "image") return "image";
   return "source";
 }
 

@@ -12,6 +12,7 @@
 | Stage          | Tool                                                        |
 | -------------- | ----------------------------------------------------------- |
 | Ingestion      | `PDFLoader` · `CSVLoader` · inline plain-text reader        |
+| OCR            | Claude vision (PNG/JPG) · Claude PDF beta (scanned PDFs)    |
 | Chunking       | `RecursiveCharacterTextSplitter` (1000 / 150 overlap)       |
 | Embedding      | OpenAI `text-embedding-3-large`                             |
 | Vector store   | Qdrant Cloud (single shared collection, filtered by doc id) |
@@ -40,6 +41,23 @@ This app uses **`RecursiveCharacterTextSplitter`** with `chunkSize: 1000` / `chu
 **CSV is a special case.** Each row is already a self-contained semantic unit; running the recursive splitter over it would shred the structure. So we keep `CSVLoader`'s row-per-document output and skip splitting for CSV files. Each row becomes one chunk, retrievable by row number.
 
 See [`lib/chunking.ts`](lib/chunking.ts) and the CSV branch in [`lib/ingest.ts`](lib/ingest.ts).
+
+---
+
+## OCR — scanned PDFs and image uploads
+
+The pipeline handles **image-based files** (scanned PDFs, photos, screenshots) without any extra infrastructure or OCR keys:
+
+- **Direct image uploads** (PNG, JPG, WEBP, GIF) → sent straight to Claude vision for transcription.
+- **PDFs**: `pdf-parse` runs first. If it extracts less than ~100 chars per page on average, we treat the PDF as scanned and transcribe it through Claude's [PDF document API](https://docs.anthropic.com/en/docs/build-with-claude/pdf-support) (the `pdfs-2024-09-25` beta).
+
+The transcription prompt (in [`lib/ocr.ts`](lib/ocr.ts)) instructs Claude to insert `--- PAGE N ---` markers between pages so we can split the result back into per-page documents — citations like `[page 4]` keep working even after OCR. Image uploads cite as `[image]`.
+
+**Trade-offs to know about**
+
+- OCR runs at upload time, not query time. A scanned PDF takes ~3–5 seconds per page; a photo takes ~5–10 seconds.
+- Vercel's serverless function timeout is 60 seconds on the hobby tier, so very long scanned PDFs (more than ~10–15 pages) may time out on the live demo. Run locally if you hit this.
+- Anthropic charges normally for the OCR call — roughly the cost of a multi-page reading task.
 
 ---
 

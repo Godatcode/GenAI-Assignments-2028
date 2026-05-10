@@ -6,7 +6,7 @@ const SYSTEM_PROMPT = `You are a careful research assistant answering questions 
 RULES — follow strictly:
 1. Answer ONLY using the information in the CONTEXT block below. Never fall back to general knowledge.
 2. If the context does not contain the answer, reply exactly: "I can't find that in this document." Do not guess. Do not improvise.
-3. After every claim, cite the source inline like [page 4] for PDFs, [row 12] for CSVs, or [source] for plain-text files. Use the page/row numbers exactly as they appear in the context headers.
+3. After every claim, cite the source inline like [page 4] for PDFs, [row 12] for CSVs, [image] for image / OCR-only files, or [source] for plain-text files. Use the page/row numbers exactly as they appear in the context headers.
 4. Quote short phrases verbatim when it makes the answer more credible. Keep answers tight — no filler, no preamble.
 5. If the question is ambiguous, answer the most likely interpretation and note the assumption in one short clause.`;
 
@@ -20,6 +20,8 @@ function formatContext(chunks: RetrievedChunk[]): string {
         header = `[Chunk ${i + 1} | ${m.fileName} | page ${m.page}]`;
       } else if (m.source === "csv" && typeof m.row === "number") {
         header = `[Chunk ${i + 1} | ${m.fileName} | row ${m.row}]`;
+      } else if (m.source === "image") {
+        header = `[Chunk ${i + 1} | ${m.fileName} | image]`;
       } else {
         header = `[Chunk ${i + 1} | ${m.fileName} | source]`;
       }

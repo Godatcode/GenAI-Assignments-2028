@@ -2,7 +2,7 @@
 
 export interface Source {
   fileName: string;
-  source: "pdf" | "csv" | "text";
+  source: "pdf" | "csv" | "text" | "image";
   page?: number;
   row?: number;
   score?: number;
@@ -16,6 +16,7 @@ interface Props {
 function describeRef(s: Source): string {
   if (s.source === "csv" && typeof s.row === "number") return `row ${s.row}`;
   if (s.source === "pdf" && typeof s.page === "number") return `page ${s.page}`;
+  if (s.source === "image") return "image";
   return "source";
 }
 

@@ -47,7 +47,7 @@ function uid() {
 
 // Walks a string and replaces [page N] / [row N] / [source] with chip spans.
 // Returns an array of strings + JSX so it can be spliced back into a parent.
-const CITE_RE = /\[(page|row)\s+(\d+)\]|\[source\]/gi;
+const CITE_RE = /\[(page|row)\s+(\d+)\]|\[source\]|\[image\]/gi;
 
 function tokenizeCitations(input: string): ReactNode[] {
   if (!CITE_RE.test(input)) {
@@ -61,8 +61,10 @@ function tokenizeCitations(input: string): ReactNode[] {
   let m: RegExpExecArray | null;
   while ((m = CITE_RE.exec(input)) !== null) {
     if (m.index > last) out.push(input.slice(last, m.index));
+    const matched = m[0].toLowerCase();
     let label: string;
-    if (m[0].toLowerCase() === "[source]") label = "src";
+    if (matched === "[source]") label = "src";
+    else if (matched === "[image]") label = "img";
     else if ((m[1] ?? "").toLowerCase() === "page") label = `p.${m[2]}`;
     else label = `r.${m[2]}`;
     out.push(
