@@ -2,7 +2,7 @@
 
 > A NotebookLM-style RAG app. Upload a PDF, plain-text, markdown, or CSV file and chat with it. Every answer is grounded in the document — if the answer isn't in the file, the model says so instead of hallucinating.
 
-🔗 **Live demo:** _add your Vercel URL here after deploy_
+🔗 **Live demo:** [notebook-ai-rag.vercel.app](https://notebook-ai-rag.vercel.app/)
 📁 **Source:** [`assignment-3/`](.)
 
 ---

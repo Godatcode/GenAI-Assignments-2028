@@ -1,6 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Children,
+  cloneElement,
+  isValidElement,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { ChatMessage, ClientDoc } from "@/lib/types";
 import SourceCards, { type Source } from "./SourceCard";
 import {
@@ -34,41 +45,83 @@ function uid() {
   return Math.random().toString(36).slice(2);
 }
 
-// Render assistant body text with [page N] / [row N] / [source] turned into
-// inline citation pills. Plain text otherwise. Done in one pass so streaming
-// stays smooth.
-function renderAnswer(text: string, streaming: boolean) {
-  const tokens: Array<{ kind: "text" | "cite"; value: string; key: string }> = [];
-  const re = /\[(page|row)\s+(\d+)\]|\[source\]/gi;
+// Walks a string and replaces [page N] / [row N] / [source] with chip spans.
+// Returns an array of strings + JSX so it can be spliced back into a parent.
+const CITE_RE = /\[(page|row)\s+(\d+)\]|\[source\]/gi;
+
+function tokenizeCitations(input: string): ReactNode[] {
+  if (!CITE_RE.test(input)) {
+    CITE_RE.lastIndex = 0;
+    return [input];
+  }
+  CITE_RE.lastIndex = 0;
+  const out: ReactNode[] = [];
   let last = 0;
   let i = 0;
   let m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) {
-    if (m.index > last) {
-      tokens.push({ kind: "text", value: text.slice(last, m.index), key: `t${i++}` });
-    }
+  while ((m = CITE_RE.exec(input)) !== null) {
+    if (m.index > last) out.push(input.slice(last, m.index));
     let label: string;
     if (m[0].toLowerCase() === "[source]") label = "src";
     else if ((m[1] ?? "").toLowerCase() === "page") label = `p.${m[2]}`;
     else label = `r.${m[2]}`;
-    tokens.push({ kind: "cite", value: label, key: `c${i++}` });
+    out.push(
+      <span key={`c${i++}`} className="cite">
+        {label}
+      </span>
+    );
     last = m.index + m[0].length;
   }
-  if (last < text.length) {
-    tokens.push({ kind: "text", value: text.slice(last), key: `t${i++}` });
-  }
+  if (last < input.length) out.push(input.slice(last));
+  return out;
+}
 
+// react-markdown gives us a tree of React elements. Recurse into it and replace
+// citation patterns inside any string leaf — that way the chip pills survive
+// being inside <strong>, <li>, <h3>, table cells, etc.
+function injectCitations(node: ReactNode): ReactNode {
+  if (typeof node === "string") return tokenizeCitations(node);
+  if (Array.isArray(node)) return node.map(injectCitations);
+  if (isValidElement<{ children?: ReactNode }>(node)) {
+    if (node.props.children == null) return node;
+    return cloneElement(
+      node,
+      undefined,
+      ...Children.toArray(injectCitations(node.props.children))
+    );
+  }
+  return node;
+}
+
+// react-markdown's Components map is strictly typed per HTML element. Each
+// override walks its children to swap [page N] / [row N] / [source] tokens for
+// chip pills before handing them back to React.
+const MARKDOWN_COMPONENTS: import("react-markdown").Components = {
+  p: ({ children, ...rest }) => <p {...rest}>{injectCitations(children)}</p>,
+  li: ({ children, ...rest }) => <li {...rest}>{injectCitations(children)}</li>,
+  h1: ({ children, ...rest }) => <h1 {...rest}>{injectCitations(children)}</h1>,
+  h2: ({ children, ...rest }) => <h2 {...rest}>{injectCitations(children)}</h2>,
+  h3: ({ children, ...rest }) => <h3 {...rest}>{injectCitations(children)}</h3>,
+  h4: ({ children, ...rest }) => <h4 {...rest}>{injectCitations(children)}</h4>,
+  h5: ({ children, ...rest }) => <h5 {...rest}>{injectCitations(children)}</h5>,
+  h6: ({ children, ...rest }) => <h6 {...rest}>{injectCitations(children)}</h6>,
+  strong: ({ children, ...rest }) => (
+    <strong {...rest}>{injectCitations(children)}</strong>
+  ),
+  em: ({ children, ...rest }) => <em {...rest}>{injectCitations(children)}</em>,
+  blockquote: ({ children, ...rest }) => (
+    <blockquote {...rest}>{injectCitations(children)}</blockquote>
+  ),
+  td: ({ children, ...rest }) => <td {...rest}>{injectCitations(children)}</td>,
+  th: ({ children, ...rest }) => <th {...rest}>{injectCitations(children)}</th>,
+};
+
+function AnswerBody({ text, streaming }: { text: string; streaming: boolean }) {
   return (
     <div className="ai-text">
-      {tokens.map((tok) =>
-        tok.kind === "cite" ? (
-          <span key={tok.key} className="cite">
-            {tok.value}
-          </span>
-        ) : (
-          <span key={tok.key}>{tok.value}</span>
-        )
-      )}
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>
+        {text}
+      </ReactMarkdown>
       {streaming && <span className="streaming-cursor" />}
     </div>
   );
@@ -93,7 +146,7 @@ function AiTurn({ turn }: { turn: Turn }) {
     <div className="msg-ai">
       <div className="ai-avatar">N</div>
       <div className="ai-body">
-        {renderAnswer(turn.content, !!turn.pending)}
+        <AnswerBody text={turn.content} streaming={!!turn.pending} />
 
         {!turn.pending && (
           <div className="ai-foot">

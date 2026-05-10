@@ -34,6 +34,7 @@ A monorepo of hands-on Generative AI projects, each one shipped with a live demo
 
 > Upload any PDF, plain-text, markdown, or CSV file and ask grounded questions about it. The full RAG pipeline runs end-to-end: ingestion → chunking → embedding → Qdrant → retrieval → Claude generation. Answers come from the document, not the model's memory — with inline page/row citations.
 
+🔗 **Live demo:** [notebook-ai-rag.vercel.app](https://notebook-ai-rag.vercel.app/)
 📁 **Source:** [`assignment-3/`](./assignment-3)
 📖 **Read more:** [assignment-3/README.md](./assignment-3/README.md)
 
