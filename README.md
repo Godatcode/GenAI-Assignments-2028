@@ -10,6 +10,7 @@ A monorepo of hands-on Generative AI projects, each one shipped with a live demo
 |:-:|---|---|---|
 | 1 | **Scaler Persona Chat** | Next.js · TypeScript · Gemini 2.5 Flash | A 3-persona AI chatbot — Anshuman Singh, Abhimanyu Saxena, Kshitij Mishra — with hand-crafted system prompts, streaming responses, and a polished mobile UI. |
 | 2 | **Website Cloner Agent** | Node.js · Claude Sonnet 4.6 · Puppeteer | A conversational CLI agent (Cursor-style) that infers a brand's URL, fetches the live HTML, takes a real screenshot, **looks at it**, and clones the site into working HTML/CSS/JS. |
+| 3 | **Notebook RAG** | Next.js · Claude Sonnet 4.6 · OpenAI embeddings · Qdrant | A NotebookLM-style RAG app — upload a PDF / CSV / text file, chat with it, and get answers grounded in the document with inline citations and source cards. |
 
 ---
 
@@ -26,6 +27,22 @@ A monorepo of hands-on Generative AI projects, each one shipped with a live demo
 - Streaming responses + typing indicator
 - Suggestion chips per persona
 - Fully responsive — sidebar collapses to pill-row on mobile
+
+---
+
+## 📚 Assignment 3 — Notebook RAG (NotebookLM clone)
+
+> Upload any PDF, plain-text, markdown, or CSV file and ask grounded questions about it. The full RAG pipeline runs end-to-end: ingestion → chunking → embedding → Qdrant → retrieval → Claude generation. Answers come from the document, not the model's memory — with inline page/row citations.
+
+📁 **Source:** [`assignment-3/`](./assignment-3)
+📖 **Read more:** [assignment-3/README.md](./assignment-3/README.md)
+
+**Highlights**
+- Three loaders: PDF (page-aware), CSV (row-as-chunk), plain text / markdown
+- Recursive-character chunking (1000 / 150 overlap) — documented strategy beyond naive page splits
+- OpenAI `text-embedding-3-large` embeddings stored in Qdrant Cloud, filtered per-document
+- Claude Sonnet 4.6 streams the answer; system prompt forbids hallucination ("I can't find that in this document.")
+- Source cards under every answer — chunk text + filename + page/row + similarity score
 
 ---
 
@@ -60,6 +77,12 @@ cd assignment-2
 npm install
 cp .env.example .env  # add your ANTHROPIC_API_KEY
 npm start
+
+# Assignment 3 — Notebook RAG (Next.js)
+cd assignment-3
+npm install
+cp .env.example .env.local   # add ANTHROPIC, OPENAI, QDRANT keys
+npm run dev          # → http://localhost:3000
 ```
 
 ---
@@ -74,14 +97,23 @@ GenAI-Assignments-2028/
 │   ├── components/
 │   ├── lib/
 │   └── ...
-└── assignment-2/            ← Website Cloner Agent (Node CLI)
-    ├── src/
-    │   ├── index.js          ← readline CLI
-    │   ├── agent.js          ← reasoning loop
-    │   ├── llm/              ← provider router (anthropic | openai)
-    │   ├── tools/            ← fileSystem · browser · fetchUrl · screenshot
-    │   ├── prompts/system.js
-    │   └── utils/parseJSON.js
+├── assignment-2/            ← Website Cloner Agent (Node CLI)
+│   ├── src/
+│   │   ├── index.js          ← readline CLI
+│   │   ├── agent.js          ← reasoning loop
+│   │   ├── llm/              ← provider router (anthropic | openai)
+│   │   ├── tools/            ← fileSystem · browser · fetchUrl · screenshot
+│   │   ├── prompts/system.js
+│   │   └── utils/parseJSON.js
+│   ├── package.json
+│   └── README.md
+└── assignment-3/            ← Notebook RAG (Next.js)
+    ├── app/
+    │   ├── api/upload/       ← POST: ingest pipeline
+    │   ├── api/chat/         ← POST: retrieve + stream answer
+    │   ├── layout.tsx · page.tsx · globals.css
+    ├── components/           ← FileUpload · ChatWindow · SourceCard
+    ├── lib/                  ← chunking · embeddings · vectorstore · ingest · retrieve · generate
     ├── package.json
     └── README.md
 ```
@@ -97,4 +129,6 @@ GenAI-Assignments-2028/
 | **Multimodal reasoning** | A2 — screenshots fed back into the model so it can *see* the target site, not just remember it |
 | **Provider abstraction** | A2 — single `getCompletion(messages)` interface over Anthropic + OpenAI |
 | **UX polish** | A1 — streaming, mobile responsiveness, suggestion chips |
+| **RAG pipelines** | A3 — chunk → embed → Qdrant → retrieve → grounded generation with citations |
+| **Vector search** | A3 — OpenAI embeddings, Qdrant similarity search, per-document metadata filtering |
 
