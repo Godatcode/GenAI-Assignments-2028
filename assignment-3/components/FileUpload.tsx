@@ -1,32 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { ClientDoc, UploadResponse } from "@/lib/types";
+import type { ClientDoc } from "@/lib/types";
+import {
+  ACCEPT_ATTR,
+  detectClientType,
+  formatSize,
+  uploadFileToServer,
+} from "@/lib/upload-client";
 import { CheckIcon, UploadIcon } from "./icons";
 
 interface Props {
   onUploaded: (doc: ClientDoc) => void;
   onError?: (message: string) => void;
 }
-
-const ACCEPT = ".pdf,.txt,.md,.csv,.png,.jpg,.jpeg,.webp,.gif";
-const IMAGE_EXTS = new Set(["png", "jpg", "jpeg", "webp", "gif"]);
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-}
-
-function detectType(name: string): string {
-  const ext = name.split(".").pop()?.toLowerCase() ?? "";
-  if (ext === "pdf") return "PDF";
-  if (ext === "csv") return "CSV";
-  if (ext === "md") return "MD";
-  if (IMAGE_EXTS.has(ext)) return "IMG";
-  return "TXT";
-}
-
 
 export default function FileUpload({ onUploaded, onError }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -68,28 +55,12 @@ export default function FileUpload({ onUploaded, onError }: Props) {
     setPending({
       name: file.name,
       size: formatSize(file.size),
-      type: detectType(file.name),
+      type: detectClientType(file.name),
     });
 
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: fd });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? `Upload failed (${res.status})`);
-      }
-      const data = (await res.json()) as UploadResponse;
-
-      // Snap to 100% so the fill catches up before we hand off to the next phase.
+      const enriched = await uploadFileToServer(file);
       setProgress(100);
-
-      const enriched: ClientDoc = {
-        ...data,
-        size: formatSize(file.size),
-        uploadedAt: "just now",
-      };
-
       // Tiny delay so the user sees the bar fill, not a jump-cut.
       await new Promise((r) => setTimeout(r, 220));
       onUploaded(enriched);
@@ -178,8 +149,8 @@ export default function FileUpload({ onUploaded, onError }: Props) {
           <em>Ask it anything.</em>
         </div>
         <div className="upload-sub">
-          One file at a time. We&apos;ll chunk it, embed it with OpenAI, and
-          index it into Qdrant — usually under thirty seconds.
+          Upload as many as you like. We&apos;ll chunk each one, embed it with
+          OpenAI, and index it into Qdrant — usually under thirty seconds per file.
         </div>
 
         <div
@@ -203,11 +174,11 @@ export default function FileUpload({ onUploaded, onError }: Props) {
           <div className="dz-primary">
             Drag a file here, or <b>click to browse</b>
           </div>
-          <div className="dz-hint">PDF · CSV · TXT · MD · PNG · JPG &nbsp;·&nbsp; up to 4 MB &nbsp;·&nbsp; OCR for scanned PDFs &amp; images</div>
+          <div className="dz-hint">PDF · CSV · TXT · MD · PNG · JPG &nbsp;·&nbsp; up to 4 MB each &nbsp;·&nbsp; OCR for scanned PDFs &amp; images</div>
           <input
             ref={inputRef}
             type="file"
-            accept={ACCEPT}
+            accept={ACCEPT_ATTR}
             style={{ display: "none" }}
             onChange={(e) => {
               const file = e.target.files?.[0];

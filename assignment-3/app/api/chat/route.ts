@@ -8,7 +8,10 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 interface ChatRequestBody {
-  documentId: string;
+  documentIds?: string[];
+  // back-compat: a single id can be sent in too, just in case an older client
+  // is still cached in someone's tab when we deploy.
+  documentId?: string;
   question: string;
   history?: ChatMessage[];
 }
@@ -21,11 +24,20 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { documentId, question, history = [] } = body;
+  const { question, history = [] } = body;
+  const documentIds: string[] = (() => {
+    if (Array.isArray(body.documentIds)) {
+      return body.documentIds.filter((id) => typeof id === "string" && id.length > 0);
+    }
+    if (typeof body.documentId === "string" && body.documentId.length > 0) {
+      return [body.documentId];
+    }
+    return [];
+  })();
 
-  if (!documentId || typeof documentId !== "string") {
+  if (documentIds.length === 0) {
     return Response.json(
-      { error: "documentId is required — upload a document first." },
+      { error: "Upload at least one document before asking questions." },
       { status: 400 }
     );
   }
@@ -34,7 +46,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const chunks = await retrieveRelevantChunks(question, documentId, 5);
+    const chunks = await retrieveRelevantChunks(question, documentIds, 5);
 
     const sourcesHeader = encodeURIComponent(
       JSON.stringify(

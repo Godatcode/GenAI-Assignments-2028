@@ -51,14 +51,16 @@ export async function getStore(): Promise<QdrantVectorStore> {
   });
 }
 
-// Restrict similarity search to the just-uploaded document by filtering on
-// the documentId we stamp into every chunk's metadata at ingest time.
-export function documentIdFilter(documentId: string) {
+// Restrict similarity search to the user's currently-loaded documents by
+// filtering on the documentId we stamp into every chunk's metadata at ingest
+// time. Qdrant's `match.any` works against the same keyword payload index
+// that `match.value` does, so multi-doc retrieval needs no schema change.
+export function documentIdFilter(documentIds: string[]) {
   return {
     must: [
       {
         key: "metadata.documentId",
-        match: { value: documentId },
+        match: { any: documentIds },
       },
     ],
   };

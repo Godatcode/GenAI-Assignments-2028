@@ -23,8 +23,8 @@ import {
 } from "./icons";
 
 interface Props {
-  doc: ClientDoc;
-  onReplace: () => void;
+  docs: ClientDoc[];
+  onClearAll: () => void;
   onSourcesChange: (cited: Source[]) => void;
 }
 
@@ -178,7 +178,7 @@ function AiTurn({ turn }: { turn: Turn }) {
   );
 }
 
-export default function ChatWindow({ doc, onReplace, onSourcesChange }: Props) {
+export default function ChatWindow({ docs, onClearAll, onSourcesChange }: Props) {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -186,12 +186,10 @@ export default function ChatWindow({ doc, onReplace, onSourcesChange }: Props) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // Reset thread when the user replaces the document. Sources collection is
-  // cleared too — the parent's onSourcesChange will reflect that.
-  useEffect(() => {
-    setTurns([]);
-    onSourcesChange([]);
-  }, [doc.documentId, onSourcesChange]);
+  // Note: we deliberately don't reset turns when the doc set changes, so
+  // adding or removing a document mid-conversation keeps the thread intact.
+  // The parent unmounts ChatWindow entirely when docs.length drops to 0,
+  // which is the natural reset path.
 
   // Auto-scroll on new turns / streaming updates.
   useEffect(() => {
@@ -245,7 +243,7 @@ export default function ChatWindow({ doc, onReplace, onSourcesChange }: Props) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          documentId: doc.documentId,
+          documentIds: docs.map((d) => d.documentId),
           question: trimmed,
           history,
         }),
@@ -306,8 +304,16 @@ export default function ChatWindow({ doc, onReplace, onSourcesChange }: Props) {
     }
   }
 
-  const canSend = !busy && input.trim().length > 0;
-  const headline = doc.fileName.replace(/\.[^.]+$/, "");
+  const canSend = !busy && input.trim().length > 0 && docs.length > 0;
+  const totalChunks = docs.reduce((acc, d) => acc + d.chunkCount, 0);
+  const headline =
+    docs.length === 1
+      ? docs[0].fileName.replace(/\.[^.]+$/, "")
+      : `${docs.length} documents`;
+  const topbarTitle =
+    docs.length === 1
+      ? docs[0].fileName
+      : `${docs.length} documents`;
 
   return (
     <main className="main">
@@ -315,15 +321,17 @@ export default function ChatWindow({ doc, onReplace, onSourcesChange }: Props) {
         <div className="topbar-title">
           {turns.length === 0 ? (
             <>
-              {doc.fileName}
+              {topbarTitle}
               <span className="muted"> · ready</span>
             </>
           ) : (
             <>
-              {doc.fileName}
+              {topbarTitle}
               <span className="muted">
                 {" · "}
-                {Math.ceil(turns.filter((t) => !t.pending || t.content.length > 0).length / 2)}{" "}
+                {Math.ceil(
+                  turns.filter((t) => !t.pending || t.content.length > 0).length / 2
+                )}{" "}
                 {Math.ceil(turns.length / 2) === 1 ? "question" : "questions"}
               </span>
             </>
@@ -332,8 +340,8 @@ export default function ChatWindow({ doc, onReplace, onSourcesChange }: Props) {
         <div className="topbar-actions">
           <button
             className="icon-btn"
-            title="Replace document"
-            onClick={onReplace}
+            title="Clear all and start over"
+            onClick={onClearAll}
           >
             <RefreshIcon />
           </button>
@@ -348,14 +356,15 @@ export default function ChatWindow({ doc, onReplace, onSourcesChange }: Props) {
           <div className="ready-empty">
             <div className="ready-eyebrow">
               <span className="dot" />
-              ready · {doc.chunkCount} chunks indexed
+              ready · {totalChunks} chunk{totalChunks === 1 ? "" : "s"} across {docs.length} document{docs.length === 1 ? "" : "s"}
             </div>
             <div className="ready-headline">
               <em>{headline}</em>
             </div>
             <div className="ready-sub">
-              Answers will be grounded strictly in this document. If something
-              isn&apos;t in the text, the model will say so.
+              {docs.length === 1
+                ? "Answers will be grounded strictly in this document. If something isn't in the text, the model will say so."
+                : "Answers will be grounded strictly in these documents — every claim cites the file it came from. If something isn't in any of them, the model will say so."}
             </div>
             <div className="starter-grid">
               {STARTERS.map((q, i) => (
@@ -408,7 +417,9 @@ export default function ChatWindow({ doc, onReplace, onSourcesChange }: Props) {
             placeholder={
               busy
                 ? "Thinking…"
-                : "Ask a question about this document…"
+                : docs.length === 1
+                  ? "Ask a question about this document…"
+                  : `Ask a question across your ${docs.length} documents…`
             }
           />
           <button
@@ -421,7 +432,9 @@ export default function ChatWindow({ doc, onReplace, onSourcesChange }: Props) {
           </button>
         </div>
         <div className="composer-hint">
-          <span>grounded in document · cites every claim</span>
+          <span>
+            grounded in {docs.length === 1 ? "the document" : "your documents"} · cites every claim
+          </span>
           <span>
             <kbd>↵</kbd> send · <kbd>⇧</kbd>+<kbd>↵</kbd> newline
           </span>
